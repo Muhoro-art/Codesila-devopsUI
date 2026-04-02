@@ -1,0 +1,1325 @@
+// 1️⃣ REQUIRED: Prisma Client generator
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =======================
+// User (auth + tenancy)
+// =======================
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  name         String?
+  role         Role    @default(USER)
+  orgId        String
+  isActive     Boolean @default(true)
+  avatarUrl    String?
+  timezone     String  @default("UTC")
+  locale       String  @default("en")
+
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+
+  onboardingComplete Boolean   @default(false)
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  passwordChangedAt  DateTime?
+
+  organization         Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  projects             Project[]
+  projectMemberships   ProjectMember[]
+  chatParticipations   ChatParticipant[]
+  chatMessages         ChatMessage[]
+  createdDeployments   Deployment[]         @relation("DeploymentCreator")
+  triggeredDeployments Deployment[]         @relation("DeploymentTrigger")
+  ownedIncidents       Incident[]           @relation("IncidentOwner")
+  createdRunbooks      Runbook[]            @relation("RunbookCreator")
+  updatedRunbooks      Runbook[]            @relation("RunbookUpdater")
+  auditEvents          AuditEvent[]         @relation("AuditActor")
+  githubConnections    GitHubInstallation[] @relation("GitHubConnector")
+  createdDroplets      Droplet[]            @relation("DropletCreator")
+  sshKeys              DropletSSHKey[]      @relation("UserSSHKeys")
+  apiKeys              ApiKey[]             @relation("ApiKeyOwner")
+  notifications        Notification[]       @relation("NotificationRecipient")
+  sentInvitations      OrgInvitation[]      @relation("InvitationSender")
+  dataExports          DataExport[]         @relation("DataExportRequester")
+  userPreferences      UserPreference[]
+  userRoles            UserRole[]
+  createdPipelines     Pipeline[]           @relation("PipelineCreator")
+  triggeredRuns        PipelineRun[]        @relation("RunTriggeredBy")
+  integrations         Integration[]        @relation("IntegrationOwner")
+
+  assistantConversations AssistantConversation[] @relation("ConversationOwner")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@map("users")
+}
+
+// =======================
+// Organization (tenancy)
+// =======================
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  domain    String?  @unique // custom domain for SSO
+  industry  String?
+  size      OrgSize  @default(SMALL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users               User[]
+  projects            Project[]
+  projectEnvironments ProjectEnvironment[]
+  services            Service[]
+  deployments         Deployment[]
+  incidents           Incident[]
+  runbooks            Runbook[]
+  auditEvents         AuditEvent[]
+  chatRooms           ChatRoom[]
+  githubInstallations GitHubInstallation[]
+  githubRepos         GitHubRepo[]
+  deploymentTargets   DeploymentTarget[]
+  droplets            Droplet[]
+  subscription        Subscription?
+  usageRecords        UsageRecord[]
+  invitations         OrgInvitation[]
+  apiKeys             ApiKey[]
+  webhookEndpoints    WebhookEndpoint[]
+  featureOverrides    FeatureOverride[]
+  notifications       Notification[]
+  orgSettings         OrgSetting[]
+  dataExports         DataExport[]
+  integrations        Integration[]
+
+  @@map("organizations")
+}
+
+// =======================
+// Project (owned by user)
+// =======================
+model Project {
+  id               String        @id @default(cuid())
+  orgId            String
+  name             String
+  key              String
+  description      String?
+  type             ProjectType   @default(API)
+  gitRepositoryUrl String?
+  defaultBranch    String?       @default("main")
+  status           ProjectStatus @default(ACTIVE)
+
+  ownerId      String
+  owner        User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  memberships       ProjectMember[]
+  environments      ProjectEnvironment[]
+  services          Service[]
+  deployments       Deployment[]
+  incidents         Incident[]
+  runbooks          Runbook[]
+  auditEvents       AuditEvent[]
+  chatRoom          ChatRoom?
+  githubRepos       GitHubRepo[]
+  ciBuilds          CIBuild[]
+  deploymentTargets DeploymentTarget[]
+  droplets          Droplet[]
+  pipelines             Pipeline[]
+  projectIntegrations   ProjectIntegration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, key])
+  @@index([orgId])
+  @@map("projects")
+}
+
+model ProjectEnvironment {
+  id        String  @id @default(cuid())
+  orgId     String
+  projectId String
+  name      String
+  key       String
+  isDefault Boolean @default(false)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, key])
+  @@index([orgId, projectId])
+  @@map("project_environments")
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+// =======================
+// Service (within project)
+// =======================
+model Service {
+  id          String      @id @default(cuid())
+  orgId       String
+  projectId   String
+  name        String
+  key         String
+  description String?
+  tier        ServiceTier @default(TIER_2)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  deployments Deployment[]
+  incidents   Incident[]
+  runbooks    Runbook[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, key])
+  @@index([orgId, projectId])
+  @@map("services")
+}
+
+// =======================
+// Deployment
+// =======================
+model Deployment {
+  id            String           @id @default(cuid())
+  orgId         String
+  projectId     String
+  serviceId     String
+  environment   Environment
+  version       String
+  status        DeploymentStatus @default(SUCCESS)
+  startedAt     DateTime         @default(now())
+  finishedAt    DateTime?
+  deployedAt    DateTime         @default(now())
+  createdById   String?
+  triggeredById String?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("DeploymentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  triggeredBy  User?        @relation("DeploymentTrigger", fields: [triggeredById], references: [id], onDelete: SetNull)
+  incidents    Incident[]
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, projectId, serviceId])
+  @@map("deployments")
+}
+
+// =======================
+// Incident
+// =======================
+model Incident {
+  id           String           @id @default(cuid())
+  orgId        String
+  projectId    String
+  serviceId    String
+  deploymentId String?
+  severity     IncidentSeverity
+  status       IncidentStatus   @default(OPEN)
+  summary      String
+  description  String?
+  startedAt    DateTime         @default(now())
+  resolvedAt   DateTime?
+  ownerId      String?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  deployment   Deployment?  @relation(fields: [deploymentId], references: [id], onDelete: SetNull)
+  owner        User?        @relation("IncidentOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, projectId, serviceId])
+  @@map("incidents")
+}
+
+// =======================
+// Runbook
+// =======================
+model Runbook {
+  id          String        @id @default(cuid())
+  orgId       String
+  projectId   String
+  serviceId   String?
+  title       String
+  content     String
+  version     Int           @default(1)
+  status      RunbookStatus @default(DRAFT)
+  createdById String?
+  updatedById String?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  createdBy    User?        @relation("RunbookCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?        @relation("RunbookUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, projectId])
+  @@map("runbooks")
+}
+
+// =======================
+// Audit Event
+// =======================
+model AuditEvent {
+  id         String   @id @default(cuid())
+  orgId      String
+  projectId  String?
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  actor        User?        @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, projectId])
+  @@map("audit_events")
+}
+
+// =======================
+// Role enum (RBAC)
+// =======================
+enum Role {
+  ADMIN
+  USER
+  DEVELOPER
+  DEVOPS
+  MANAGER
+  SUPER_ADMIN
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectType {
+  API
+  WEB
+  MOBILE
+  FULLSTACK
+  DATA
+  INFRA
+  LIBRARY
+  OTHER
+}
+
+enum ProjectRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ServiceTier {
+  TIER_1
+  TIER_2
+  TIER_3
+}
+
+enum Environment {
+  DEV
+  STAGING
+  PROD
+}
+
+enum DeploymentStatus {
+  SUCCESS
+  FAILED
+  RUNNING
+}
+
+enum IncidentSeverity {
+  SEV1
+  SEV2
+  SEV3
+  SEV4
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  MITIGATED
+  RESOLVED
+}
+
+enum RunbookStatus {
+  DRAFT
+  ACTIVE
+  DEPRECATED
+}
+
+// =======================
+// Chat rooms
+// =======================
+model ChatRoom {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  orgId     String
+  projectId String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@index([orgId])
+  @@map("chat_rooms")
+}
+
+// =======================
+// Chat participants
+// =======================
+model ChatParticipant {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  role      String?
+  createdAt DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("chat_participants")
+}
+
+// =======================
+// Chat messages
+// =======================
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  senderId  String
+  content   String
+  priority  String   @default("normal")
+  pinnedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@map("chat_messages")
+}
+
+// =======================
+// GitHub Integration (org-level OAuth app installation)
+// =======================
+model GitHubInstallation {
+  id             String    @id @default(cuid())
+  orgId          String    @unique
+  installationId Int?
+  accessToken    String
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  githubLogin    String // github username or org name
+  avatarUrl      String?
+  scope          String? // "repo,read:org,..."
+  connectedById  String
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  connectedBy  User         @relation("GitHubConnector", fields: [connectedById], references: [id], onDelete: Cascade)
+
+  repos GitHubRepo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("github_installations")
+}
+
+// =======================
+// Tracked GitHub Repositories (linked to a project)
+// =======================
+model GitHubRepo {
+  id             String  @id @default(cuid())
+  orgId          String
+  projectId      String
+  installationId String
+  githubRepoId   Int // github's numeric repo id
+  fullName       String // "owner/repo"
+  defaultBranch  String  @default("main")
+  private        Boolean @default(false)
+  htmlUrl        String
+  webhookId      Int? // github webhook id for push/PR events
+  webhookSecret  String?
+  trackPushes    Boolean @default(true)
+  trackPRs       Boolean @default(true)
+  trackBuilds    Boolean @default(true)
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  installation GitHubInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+
+  commits GitCommit[]
+  builds  CIBuild[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, githubRepoId])
+  @@index([orgId])
+  @@map("github_repos")
+}
+
+// =======================
+// Git Commits (tracked via webhook push events)
+// =======================
+model GitCommit {
+  id           String   @id @default(cuid())
+  orgId        String
+  repoId       String
+  sha          String
+  message      String
+  authorName   String
+  authorEmail  String
+  authorAvatar String?
+  branch       String
+  url          String // link to github commit
+  additions    Int      @default(0)
+  deletions    Int      @default(0)
+  filesChanged Int      @default(0)
+  timestamp    DateTime // git author timestamp
+
+  repo GitHubRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([repoId, sha])
+  @@index([orgId, repoId])
+  @@map("git_commits")
+}
+
+// =======================
+// CI/CD Builds (tracked via GitHub Actions webhook or status API)
+// =======================
+model CIBuild {
+  id           String        @id @default(cuid())
+  orgId        String
+  repoId       String
+  projectId    String
+  runId        Int? // github actions run_id
+  workflowName String?
+  branch       String
+  commitSha    String
+  status       CIBuildStatus @default(PENDING)
+  conclusion   String? // success, failure, cancelled, ...
+  htmlUrl      String? // link to GH actions run
+  startedAt    DateTime?
+  completedAt  DateTime?
+  durationSecs Int?
+  triggeredBy  String? // push, pull_request, workflow_dispatch, ...
+  errorMessage String?
+
+  repo    GitHubRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([repoId, runId])
+  @@index([orgId, projectId])
+  @@map("ci_builds")
+}
+
+// =======================
+// Deployment Targets (where does the project actually deploy?)
+// =======================
+model DeploymentTarget {
+  id           String         @id @default(cuid())
+  orgId        String
+  projectId    String
+  environment  Environment
+  provider     DeployProvider @default(CUSTOM)
+  name         String // "AWS ECS Prod", "Railway Staging", etc
+  url          String? // live URL for health check / link
+  region       String?
+  configJson   Json? // provider-specific config (non-secret)
+  lastDeployAt DateTime?
+  lastStatus   String?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, environment, name])
+  @@index([orgId])
+  @@map("deployment_targets")
+}
+
+enum CIBuildStatus {
+  PENDING
+  IN_PROGRESS
+  SUCCESS
+  FAILURE
+  CANCELLED
+}
+
+enum DeployProvider {
+  AWS_ECS
+  AWS_LAMBDA
+  RAILWAY
+  VERCEL
+  DOCKER
+  K8S
+  DIGITALOCEAN
+  CUSTOM
+}
+
+// =======================
+// DigitalOcean Droplets (SSH dev environments)
+// =======================
+model Droplet {
+  id                String        @id @default(cuid())
+  orgId             String
+  projectId         String?
+  name              String // friendly name e.g. "staging-api"
+  dropletId         String?       @unique // DigitalOcean numeric droplet id (stored as string)
+  ipAddress         String // public IPv4
+  region            String        @default("nyc3")
+  size              String        @default("s-1vcpu-1gb")
+  image             String        @default("ubuntu-22-04-x64")
+  status            DropletStatus @default(ACTIVE)
+  sshUser           String        @default("root") // user to SSH as
+  sshPort           Int           @default(22)
+  sshKeyFingerprint String? // fingerprint of the key used
+  githubConnected   Boolean       @default(false) // is GitHub SSH auth configured
+  vscodeReady       Boolean       @default(false) // is VS Code remote ready
+  tags              String? // comma-separated tags
+  createdById       String
+
+  organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  project      Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy    User            @relation("DropletCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  sshKeys      DropletSSHKey[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, name])
+  @@index([orgId])
+  @@map("droplets")
+}
+
+// =======================
+// SSH Keys for Droplet access
+// =======================
+model DropletSSHKey {
+  id             String  @id @default(cuid())
+  orgId          String
+  dropletId      String
+  userId         String
+  label          String // e.g. "work laptop", "vscode-remote"
+  publicKey      String // SSH public key
+  fingerprint    String // SHA256 fingerprint
+  addedToDroplet Boolean @default(false)
+
+  droplet Droplet @relation(fields: [dropletId], references: [id], onDelete: Cascade)
+  user    User    @relation("UserSSHKeys", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([dropletId, fingerprint])
+  @@index([orgId, userId])
+  @@map("droplet_ssh_keys")
+}
+
+enum DropletStatus {
+  ACTIVE
+  INACTIVE
+  PROVISIONING
+  ERROR
+}
+
+// =======================
+// Organization Size
+// =======================
+enum OrgSize {
+  SOLO
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+// =======================
+// Subscription Plans (defines tiers)
+// =======================
+model Plan {
+  id           String  @id @default(cuid())
+  name         String  @unique // "free", "starter", "professional", "enterprise"
+  displayName  String // "Free", "Starter", "Professional", "Enterprise"
+  description  String?
+  monthlyPrice Int     @default(0) // cents
+  annualPrice  Int     @default(0) // cents
+  currency     String  @default("USD")
+  isActive     Boolean @default(true)
+  sortOrder    Int     @default(0)
+
+  // Limits
+  maxUsers    Int    @default(5)
+  maxProjects Int    @default(3)
+  maxStorage  BigInt @default(1073741824) // 1GB in bytes
+  maxApiCalls Int    @default(10000) // per month
+  maxDroplets Int    @default(1)
+  maxWebhooks Int    @default(3)
+
+  // Feature access (JSON of feature flags for this plan)
+  features Json @default("{}")
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("plans")
+}
+
+// =======================
+// Subscription (org <-> plan)
+// =======================
+model Subscription {
+  id                 String             @id @default(cuid())
+  orgId              String             @unique
+  planId             String
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean            @default(false)
+  cancelledAt        DateTime?
+  trialEndsAt        DateTime?
+  billingCycle       BillingCycle       @default(MONTHLY)
+
+  // External payment processor reference
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  // Seat-based billing
+  quantity Int @default(1) // seats purchased
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+  invoices     Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+  UNPAID
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+// =======================
+// Invoice (billing history)
+// =======================
+model Invoice {
+  id               String        @id @default(cuid())
+  subscriptionId   String
+  amountDue        Int           @default(0) // cents
+  amountPaid       Int           @default(0)
+  currency         String        @default("USD")
+  status           InvoiceStatus @default(DRAFT)
+  invoiceNumber    String        @unique
+  invoiceDate      DateTime      @default(now())
+  dueDate          DateTime
+  paidAt           DateTime?
+  stripeInvoiceId  String?
+  hostedInvoiceUrl String?
+  pdfUrl           String?
+  lineItems        Json          @default("[]") // [{description, quantity, unitPrice, total}]
+  notes            String?
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subscriptionId])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+// =======================
+// Usage Record (metering)
+// =======================
+model UsageRecord {
+  id          String      @id @default(cuid())
+  orgId       String
+  metric      UsageMetric
+  value       BigInt      @default(0)
+  periodStart DateTime
+  periodEnd   DateTime
+  metadata    Json?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, metric, periodStart])
+  @@map("usage_records")
+}
+
+enum UsageMetric {
+  API_CALLS
+  STORAGE_BYTES
+  CI_BUILDS
+  DEPLOYMENTS
+  ACTIVE_USERS
+  CHAT_MESSAGES
+  ASSISTANT_QUERIES
+  BANDWIDTH_BYTES
+}
+
+// =======================
+// Organization Invitation
+// =======================
+model OrgInvitation {
+  id          String           @id @default(cuid())
+  orgId       String
+  email       String
+  role        Role             @default(USER)
+  token       String           @unique @default(cuid())
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  invitedById String
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, email])
+  @@index([token])
+  @@map("org_invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+// =======================
+// API Key (programmatic access)
+// =======================
+model ApiKey {
+  id         String       @id @default(cuid())
+  orgId      String
+  userId     String
+  name       String
+  keyHash    String       @unique // SHA-256 hash of the actual key
+  keyPrefix  String // first 8 chars for identification (e.g. "csk_live_")
+  scopes     String       @default("read") // comma-separated: "read,write,admin"
+  status     ApiKeyStatus @default(ACTIVE)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  rateLimit  Int          @default(1000) // requests per hour
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  owner        User         @relation("ApiKeyOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+// =======================
+// Webhook Endpoint
+// =======================
+model WebhookEndpoint {
+  id              String        @id @default(cuid())
+  orgId           String
+  url             String
+  description     String?
+  secret          String // HMAC signing secret
+  events          String // comma-separated events: "project.created,deployment.completed,..."
+  status          WebhookStatus @default(ACTIVE)
+  lastTriggeredAt DateTime?
+  failureCount    Int           @default(0)
+
+  organization Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@map("webhook_endpoints")
+}
+
+enum WebhookStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+// =======================
+// Webhook Delivery Log
+// =======================
+model WebhookDelivery {
+  id             String  @id @default(cuid())
+  endpointId     String
+  event          String
+  payload        Json
+  responseStatus Int?
+  responseBody   String?
+  success        Boolean @default(false)
+  attempt        Int     @default(1)
+  duration       Int? // ms
+  error          String?
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+// =======================
+// Feature Flag
+// =======================
+model FeatureFlag {
+  id          String  @id @default(cuid())
+  key         String  @unique // "sso", "advanced_analytics", "custom_domains", etc.
+  name        String
+  description String?
+  defaultOn   Boolean @default(false) // default state if no override
+  isGlobal    Boolean @default(false) // affects all orgs regardless of plan
+
+  overrides FeatureOverride[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
+// =======================
+// Per-org feature override
+// =======================
+model FeatureOverride {
+  id       String  @id @default(cuid())
+  orgId    String
+  flagId   String
+  enabled  Boolean @default(true)
+  metadata Json? // any per-org config for this feature
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  flag         FeatureFlag  @relation(fields: [flagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, flagId])
+  @@map("feature_overrides")
+}
+
+// =======================
+// Notification (in-app)
+// =======================
+model Notification {
+  id       String              @id @default(cuid())
+  orgId    String
+  userId   String
+  type     NotificationType
+  title    String
+  body     String?
+  link     String? // deep-link within app
+  readAt   DateTime?
+  channel  NotificationChannel @default(IN_APP)
+  metadata Json?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  recipient    User         @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@index([orgId])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  SYSTEM
+  BILLING
+  INVITATION
+  DEPLOYMENT
+  INCIDENT
+  SECURITY
+  USAGE_WARNING
+  FEATURE_UPDATE
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  BOTH
+}
+
+// =======================
+// Org Settings (key-value)
+// =======================
+model OrgSetting {
+  id    String @id @default(cuid())
+  orgId String
+  key   String
+  value String
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, key])
+  @@map("org_settings")
+}
+
+// =======================
+// User Preferences (key-value)
+// =======================
+model UserPreference {
+  id     String @id @default(cuid())
+  userId String
+  key    String
+  value  String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@map("user_preferences")
+}
+
+// =======================
+// Data Export (GDPR)
+// =======================
+model DataExport {
+  id            String           @id @default(cuid())
+  orgId         String
+  requestedById String
+  type          DataExportType
+  status        DataExportStatus @default(PENDING)
+  format        String           @default("json") // json, csv
+  fileUrl       String?
+  fileSize      BigInt?
+  expiresAt     DateTime?
+  completedAt   DateTime?
+  error         String?
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  requestedBy  User         @relation("DataExportRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@map("data_exports")
+}
+
+enum DataExportType {
+  FULL_ORG
+  USER_DATA
+  AUDIT_LOGS
+  PROJECTS
+  BILLING
+}
+
+enum DataExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+// =======================
+// RBAC — DB-driven tables (§2.5.1, §3.2)
+// =======================
+model RbacRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model RbacPermission {
+  id          String   @id @default(cuid())
+  action      String   @unique
+  description String?
+  resource    String?
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role RbacRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  grantedAt    DateTime @default(now())
+
+  role       RbacRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission RbacPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// =======================
+// CI/CD Pipelines (§3.3)
+// =======================
+model Pipeline {
+  id         String  @id @default(cuid())
+  projectId  String
+  name       String
+  configYaml String  @db.Text
+  createdById String?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("PipelineCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  runs      PipelineRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("pipelines")
+}
+
+model PipelineRun {
+  id          String            @id @default(cuid())
+  pipelineId  String
+  status      PipelineRunStatus @default(QUEUED)
+  triggeredById String?
+  branch      String?
+  commitSha   String?
+  metadata    Json?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  triggeredBy User?    @relation("RunTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
+  steps       RunStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pipelineId])
+  @@map("pipeline_runs")
+}
+
+model RunStep {
+  id        String            @id @default(cuid())
+  runId     String
+  name      String
+  status    PipelineRunStatus @default(QUEUED)
+  logOutput String?           @db.Text
+  sortOrder Int               @default(0)
+  startedAt DateTime?
+  finishedAt DateTime?
+
+  run PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([runId])
+  @@map("run_steps")
+}
+
+enum PipelineRunStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILURE
+  CANCELLED
+}
+
+// =======================
+// Generic Integration (GitHub, GitLab, Docker Registry, etc.)
+// =======================
+model Integration {
+  id              String  @id @default(cuid())
+  orgId           String
+  type            String  // github, gitlab, docker_registry
+  name            String
+  ownerScope      String  @default("org") // "org" = platform-level
+  credentialsEnc  String  @db.Text // AES-256-GCM encrypted token/credentials
+  registryUrl     String? // docker registry URL
+  username        String? // docker registry username
+  isActive        Boolean @default(true)
+  createdById     String
+
+  organization        Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdBy           User                 @relation("IntegrationOwner", fields: [createdById], references: [id], onDelete: Cascade)
+  projectIntegrations ProjectIntegration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+  @@map("integrations")
+}
+
+// =======================
+// ProjectIntegration — binding between a Project and a platform Integration
+// =======================
+model ProjectIntegration {
+  id            String  @id @default(cuid())
+  projectId     String
+  integrationId String
+  configJson    Json?   // project-specific: repo, branch, namespace, env, etc.
+  status        String  @default("active") // active, disabled
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, integrationId])
+  @@index([projectId])
+  @@index([integrationId])
+  @@map("project_integrations")
+}
+
+// =======================
+// Assistant Conversations (AI chat history)
+// =======================
+model AssistantConversation {
+  id        String   @id @default(cuid())
+  orgId     String
+  userId    String
+  title     String   @default("New conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User                @relation("ConversationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  messages AssistantMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([orgId])
+  @@map("assistant_conversations")
+}
+
+model AssistantMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // "user" | "assistant"
+  content        String   @db.Text
+  toolCalls      Json?    // [{name, args, result}] for agent tool calls
+  createdAt      DateTime @default(now())
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("assistant_messages")
+}

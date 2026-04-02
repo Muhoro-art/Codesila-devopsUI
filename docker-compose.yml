@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: devflow_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-devflow}
+      POSTGRES_USER: ${POSTGRES_USER:-devflow_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devflow_admin} -d ${POSTGRES_DB:-devflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Security: don't expose DB port externally in production
+    # ports:
+    #   - "5432:5432"
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  postgres_data:

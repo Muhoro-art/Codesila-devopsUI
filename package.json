@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "codesila",
+  "workspaces": [
+    "codesila-backend",
+    "codesila-frontend"
+  ],
+  "dependencies": {
+    "yaml": "^2.8.2"
+  }
+}

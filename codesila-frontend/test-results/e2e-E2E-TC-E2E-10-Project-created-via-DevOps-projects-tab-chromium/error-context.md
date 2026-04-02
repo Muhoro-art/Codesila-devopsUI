@@ -1,0 +1,104 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - heading "E2E TEST CORP" [level=1] [ref=e7]
+        - text: CodeSila™
+      - button "Collapse" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - generic [ref=e11]:
+      - generic [ref=e12]: E2E Admin
+      - generic [ref=e13]: ADMIN
+    - navigation [ref=e14]:
+      - link "Dashboard" [ref=e15] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e16]
+        - generic [ref=e21]: Dashboard
+      - link "Projects" [ref=e22] [cursor=pointer]:
+        - /url: /projects
+        - img [ref=e23]
+        - generic [ref=e27]: Projects
+      - link "Integrations" [ref=e28] [cursor=pointer]:
+        - /url: /integrations
+        - img [ref=e29]
+        - generic [ref=e32]: Integrations
+      - link "Team" [ref=e33] [cursor=pointer]:
+        - /url: /team
+        - img [ref=e34]
+        - generic [ref=e39]: Team
+      - link "Audit Log" [ref=e40] [cursor=pointer]:
+        - /url: /audit-log
+        - img [ref=e41]
+        - generic [ref=e43]: Audit Log
+      - link "Notifications" [ref=e44] [cursor=pointer]:
+        - /url: /notifications
+        - img [ref=e45]
+        - generic [ref=e48]: Notifications
+      - link "Billing" [ref=e49] [cursor=pointer]:
+        - /url: /billing
+        - img [ref=e50]
+        - generic [ref=e52]: Billing
+      - link "API Keys" [ref=e53] [cursor=pointer]:
+        - /url: /api-keys
+        - img [ref=e54]
+        - generic [ref=e58]: API Keys
+      - link "Settings" [ref=e59] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e60]
+        - generic [ref=e63]: Settings
+    - generic [ref=e64]:
+      - button "Chat" [ref=e65] [cursor=pointer]:
+        - img [ref=e66]
+        - generic [ref=e68]: Chat
+      - link "Password" [ref=e69] [cursor=pointer]:
+        - /url: /change-password
+        - img [ref=e70]
+        - generic [ref=e73]: Password
+      - link "2FA Setup" [ref=e74] [cursor=pointer]:
+        - /url: /setup-2fa
+        - img [ref=e75]
+        - generic [ref=e77]: 2FA Setup
+      - button "Log Out" [ref=e78] [cursor=pointer]:
+        - img [ref=e79]
+        - generic [ref=e82]: Log Out
+  - main [ref=e84]:
+    - generic [ref=e85]:
+      - heading "DevOps Dashboard" [level=2] [ref=e86]
+      - generic [ref=e87]:
+        - button "Dashboard" [ref=e88] [cursor=pointer]
+        - button "Deployments" [ref=e89] [cursor=pointer]
+        - button "Projects" [ref=e90] [cursor=pointer]
+        - button "Users" [ref=e91] [cursor=pointer]
+        - button "Audit" [ref=e92] [cursor=pointer]
+        - button "Incidents" [ref=e93] [cursor=pointer]
+        - button "Insights" [ref=e94] [cursor=pointer]
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - heading "Projects" [level=2] [ref=e98]:
+            - img [ref=e99]
+            - text: Projects
+          - generic [ref=e103]:
+            - generic [ref=e104]: Create a project, then link a GitHub repo to it from the project's Integrations tab.
+            - generic [ref=e105]: Too many requests. Please try again later.
+            - generic [ref=e106]:
+              - textbox "Project name" [ref=e107]: E2E-Proj-1774008637905
+              - textbox "Key (e.g. PROJ)" [ref=e108]: E2EPRO
+            - generic [ref=e109]:
+              - button "Create Project" [ref=e110] [cursor=pointer]
+              - button "Cancel" [ref=e111] [cursor=pointer]
+        - generic [ref=e112]:
+          - heading "All Projects" [level=2] [ref=e113]:
+            - img [ref=e114]
+            - text: All Projects
+          - generic [ref=e119]:
+            - generic [ref=e120]:
+              - text: No projects yet. Click
+              - strong [ref=e121]: + New Project
+              - text: above to create one.
+            - generic [ref=e122]:
+              - strong [ref=e123]: "How it works:"
+              - text: Admin or DevOps creates a project → opens it → Integrations tab → links a GitHub repo → commits and builds sync automatically. To assign team members, open the project → Team tab.
+```

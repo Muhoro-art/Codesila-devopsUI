@@ -1,0 +1,8 @@
+            id             |         email          |      name       |   role    
+---------------------------+------------------------+-----------------+-----------
+ cmlkik6qw0001pizhmqiqjikr | admin@codesila.local   | Admin User      | ADMIN
+ cmlkik6td0003pizhoupinkf4 | devops@codesila.local  | DevOps Engineer | DEVOPS
+ cmlkik6vn0005pizhmqkitp8s | dev@codesila.local     | Developer       | DEVELOPER
+ cmlkik6y10007pizh7deac9uf | manager@codesila.local | Project Manager | MANAGER
+(4 rows)
+

@@ -1,0 +1,196 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Cyberpunk Theme */
+:root {
+  --cyber-base: #0a0a0f;
+  --cyber-text: #e0e0ff;
+  --cyber-cyan: #00f3ff;
+  --cyber-green: #00ff9d;
+  --cyber-magenta: #ff00ff;
+  --cyber-yellow: #ffff00;
+  --cyber-blue: #0066ff;
+  --cyber-purple: #9d00ff;
+  --cyber-red: #ff003c;
+}
+
+body {
+  background-color: var(--cyber-base);
+  color: var(--cyber-text);
+  font-family: 'Fira Code', monospace;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Cyberpunk Fonts */
+
+
+.font-fira {
+  font-family: 'Fira Code', monospace;
+}
+
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Glitch Animation */
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+/* Neon Pulse Animation */
+@keyframes pulseNeon {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px currentColor;
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 20px currentColor;
+  }
+}
+
+/* Scanline Animation */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.animate-glitch {
+  animation: glitch 0.5s infinite;
+}
+
+.animate-pulseNeon {
+  animation: pulseNeon 2s infinite;
+}
+
+.animate-scanline {
+  animation: scanline 8s linear infinite;
+}
+
+/* Custom Utility Classes */
+.bg-cyber-base { background-color: var(--cyber-base); }
+.text-cyber-text { color: var(--cyber-text); }
+.text-cyber-cyan { color: var(--cyber-cyan); }
+.text-cyber-green { color: var(--cyber-green); }
+.text-cyber-magenta { color: var(--cyber-magenta); }
+.text-cyber-yellow { color: var(--cyber-yellow); }
+.text-cyber-blue { color: var(--cyber-blue); }
+.text-cyber-purple { color: var(--cyber-purple); }
+.text-cyber-red { color: var(--cyber-red); }
+
+.border-cyber-cyan { border-color: var(--cyber-cyan); }
+.border-cyber-green { border-color: var(--cyber-green); }
+.border-cyber-magenta { border-color: var(--cyber-magenta); }
+.border-cyber-yellow { border-color: var(--cyber-yellow); }
+.border-cyber-blue { border-color: var(--cyber-blue); }
+.border-cyber-purple { border-color: var(--cyber-purple); }
+.border-cyber-red { border-color: var(--cyber-red); }
+
+.bg-cyber-cyan\/10 { background-color: rgba(0, 243, 255, 0.1); }
+.bg-cyber-green\/10 { background-color: rgba(0, 255, 157, 0.1); }
+.bg-cyber-magenta\/10 { background-color: rgba(255, 0, 255, 0.1); }
+.bg-cyber-yellow\/10 { background-color: rgba(255, 255, 0, 0.1); }
+.bg-cyber-blue\/10 { background-color: rgba(0, 102, 255, 0.1); }
+.bg-cyber-purple\/10 { background-color: rgba(157, 0, 255, 0.1); }
+.bg-cyber-red\/10 { background-color: rgba(255, 0, 60, 0.1); }
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cyber-cyan);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyber-green);
+}
+
+/* Selection Color */
+::selection {
+  background-color: var(--cyber-cyan);
+  color: var(--cyber-base);
+}
+
+/* Cyberpunk Card Effects */
+.cyber-card {
+  position: relative;
+  background: rgba(10, 10, 15, 0.8);
+  border: 1px solid;
+  border-image: linear-gradient(45deg, var(--cyber-cyan), var(--cyber-magenta)) 1;
+  backdrop-filter: blur(10px);
+}
+
+.cyber-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 50%, rgba(0, 243, 255, 0.1) 50%);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.cyber-card:hover::before {
+  opacity: 1;
+}
+
+/* Terminal Text Effect */
+.terminal-text {
+  background: linear-gradient(90deg, var(--cyber-cyan), var(--cyber-green), var(--cyber-magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% auto;
+  animation: textShine 2s ease-in-out infinite alternate;
+}
+
+@keyframes textShine {
+  to {
+    background-position: 200%;
+  }
+}
+
+/* Grid Pattern Background */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+}

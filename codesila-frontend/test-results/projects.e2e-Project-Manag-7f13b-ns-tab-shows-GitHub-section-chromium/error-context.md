@@ -1,0 +1,151 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - heading "E2E PROJ CORP" [level=1] [ref=e7]
+        - text: CodeSila™
+      - button "Collapse" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - generic [ref=e11]:
+      - generic [ref=e12]: E2E Proj Admin
+      - generic [ref=e13]: ADMIN
+    - navigation [ref=e14]:
+      - link "Dashboard" [ref=e15] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e16]
+        - generic [ref=e21]: Dashboard
+      - link "Projects" [ref=e22] [cursor=pointer]:
+        - /url: /projects
+        - img [ref=e23]
+        - generic [ref=e27]: Projects
+      - link "Integrations" [ref=e28] [cursor=pointer]:
+        - /url: /integrations
+        - img [ref=e29]
+        - generic [ref=e32]: Integrations
+      - link "Team" [ref=e33] [cursor=pointer]:
+        - /url: /team
+        - img [ref=e34]
+        - generic [ref=e39]: Team
+      - link "Audit Log" [ref=e40] [cursor=pointer]:
+        - /url: /audit-log
+        - img [ref=e41]
+        - generic [ref=e43]: Audit Log
+      - link "Notifications" [ref=e44] [cursor=pointer]:
+        - /url: /notifications
+        - img [ref=e45]
+        - generic [ref=e48]: Notifications
+      - link "Billing" [ref=e49] [cursor=pointer]:
+        - /url: /billing
+        - img [ref=e50]
+        - generic [ref=e52]: Billing
+      - link "API Keys" [ref=e53] [cursor=pointer]:
+        - /url: /api-keys
+        - img [ref=e54]
+        - generic [ref=e58]: API Keys
+      - link "Settings" [ref=e59] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e60]
+        - generic [ref=e63]: Settings
+    - generic [ref=e64]:
+      - button "Chat" [ref=e65] [cursor=pointer]:
+        - img [ref=e66]
+        - generic [ref=e68]: Chat
+      - link "Password" [ref=e69] [cursor=pointer]:
+        - /url: /change-password
+        - img [ref=e70]
+        - generic [ref=e73]: Password
+      - link "2FA Setup" [ref=e74] [cursor=pointer]:
+        - /url: /setup-2fa
+        - img [ref=e75]
+        - generic [ref=e77]: 2FA Setup
+      - button "Log Out" [ref=e78] [cursor=pointer]:
+        - img [ref=e79]
+        - generic [ref=e82]: Log Out
+  - main [ref=e84]:
+    - generic [ref=e85]:
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - button "Back" [ref=e88] [cursor=pointer]:
+            - img [ref=e89]
+            - text: Back
+          - generic [ref=e91]:
+            - generic [ref=e92]: 🔌
+            - generic [ref=e93]:
+              - heading "Updated-1774008685270" [level=1] [ref=e94]
+              - paragraph [ref=e95]: SP6836 • API / Backend • ACTIVE
+          - paragraph [ref=e96]: E2E seed project for detail tests
+        - generic [ref=e98]:
+          - img [ref=e99]
+          - text: Project Chat Active
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - generic [ref=e103]: "1"
+          - generic [ref=e104]: Services
+        - generic [ref=e105]:
+          - generic [ref=e106]: "0"
+          - generic [ref=e107]: Deployments
+        - generic [ref=e108]:
+          - generic [ref=e109]: "0"
+          - generic [ref=e110]: Incidents
+        - generic [ref=e111]:
+          - generic [ref=e112]: "2"
+          - generic [ref=e113]: Team
+        - generic [ref=e114]:
+          - generic [ref=e115]: "3"
+          - generic [ref=e116]: Environments
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - button "Overview" [ref=e120] [cursor=pointer]:
+            - img [ref=e121]
+            - text: Overview
+          - button "Team" [ref=e125] [cursor=pointer]:
+            - img [ref=e126]
+            - text: Team
+          - button "Services" [ref=e131] [cursor=pointer]:
+            - img [ref=e132]
+            - text: Services
+          - button "Deployments" [ref=e135] [cursor=pointer]:
+            - img [ref=e136]
+            - text: Deployments
+          - button "Incidents" [ref=e138] [cursor=pointer]:
+            - img [ref=e139]
+            - text: Incidents
+          - button "Runbooks" [ref=e141] [cursor=pointer]:
+            - img [ref=e142]
+            - text: Runbooks
+          - button "Audit" [ref=e145] [cursor=pointer]:
+            - img [ref=e146]
+            - text: Audit
+          - button "Integrations" [active] [ref=e148] [cursor=pointer]:
+            - img [ref=e149]
+            - text: Integrations
+          - button "Pipelines" [ref=e152] [cursor=pointer]:
+            - img [ref=e153]
+            - text: Pipelines
+          - button "Settings" [ref=e155] [cursor=pointer]:
+            - img [ref=e156]
+            - text: Settings
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - heading "Platform Integrations" [level=2] [ref=e162]:
+                - img [ref=e163]
+                - text: Platform Integrations
+              - button "Bind Integration" [ref=e166] [cursor=pointer]:
+                - img [ref=e167]
+                - text: Bind Integration
+            - paragraph [ref=e168]: These are organization-level integrations (GitHub, GitLab, Docker) linked to this project with project-specific configuration.
+            - generic [ref=e170]: No platform integrations bound to this project yet. Bind one to connect GitHub, GitLab, or Docker to this project's pipelines.
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - heading "Deployment Targets (0)" [level=2] [ref=e173]:
+                - img [ref=e174]
+                - text: Deployment Targets (0)
+              - button "Add Target" [ref=e176] [cursor=pointer]:
+                - img [ref=e177]
+                - text: Add Target
+            - generic [ref=e179]: No deployment targets configured. Add one to define where this project deploys.
+```

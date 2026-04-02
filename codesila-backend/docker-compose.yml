@@ -1,0 +1,107 @@
+
+services:
+  # ─── PostgreSQL 16 — primary data store (§2.4.3) ───────────
+  postgres:
+    image: postgres:16
+    container_name: codesila_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-codesila}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-codesila_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codesila} -d ${POSTGRES_DB:-codesila_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 — caching & rate-limit store (§2.4.3) ─────────
+  redis:
+    image: redis:7-alpine
+    container_name: codesila_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Backend Node.js API (§2.4.3) ──────────────────────────
+  backend:
+    restart: unless-stopped
+    build: .
+    container_name: codesila-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-codesila}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-codesila_db}?schema=public
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    command: npm run dev
+
+  # ─── Prometheus — metrics collection (§2.4.3) ──────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: codesila_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - backend
+
+  # ─── Worker — background job processor (§3.1.2) ────────────
+  worker:
+    restart: unless-stopped
+    build: .
+    container_name: codesila-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-codesila}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-codesila_db}?schema=public
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: ${NODE_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+    command: npx tsx src/infra/queue/worker.ts
+
+  # ─── Frontend — React SPA served via Vite / Nginx (§3.1.2) ─
+  frontend:
+    build:
+      context: ../codesila-frontend
+      dockerfile: Dockerfile
+    container_name: codesila-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  node_modules:
+  redis_data:
+  prometheus_data:
